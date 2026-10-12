@@ -1,10 +1,29 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below, together with the MICrONS dataset papers listed in the README."
 title: "microns-finder: plain-language search of MICrONS cells with Neuroglancer links"
+abstract: >-
+  microns-finder finds cells in the MICrONS cubic millimeter of mouse visual cortex
+  (electron microscopy, CAVE datastack minnie65_public) by cell type, cortical layer,
+  visual area and proofreading status, finds synapses between two cell types, and returns
+  Neuroglancer links to view them. Cell-type names are mapped to the dataset's label systems
+  (AIBS subclass, m-type and multifeature types) with a consensus mode; layers are assigned from
+  soma depth with data-derived boundaries. It runs as a Python library, a command-line tool and an
+  MCP server, so AI assistants such as ChatGPT, Gemini, Claude or Codex can answer plain-language
+  requests with real cells.
+type: software
 version: 0.1.0
-date-released: 2026-10-11
+date-released: 2026-10-12
 license: MIT
 repository-code: "https://github.com/jsanzros/microns-neuroglancer-finder"
+keywords:
+  - connectomics
+  - MICrONS
+  - neuroglancer
+  - electron microscopy
+  - mouse visual cortex
+  - cell types
+  - CAVE
+  - model context protocol
 authors:
   - family-names: "Sanz-Ros"
     given-names: "Jorge"
