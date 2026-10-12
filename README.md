@@ -17,11 +17,11 @@ MICrONS minnie65_public v1926: astrocyte
 Neuroglancer: https://spelunker.cave-explorer.org/#!middleauth+https://global.daf-apis.com/nglstate/api/v1/...
 ```
 
-It works with any AI assistant, and without one:
+It works with:
 
 - **Any MCP-capable AI**: ChatGPT, Gemini, Claude, Codex, GitHub Copilot, Cursor, Antigravity and others. The `microns-finder-mcp` server gives the AI four tools (`find_cells`, `describe_cells`, `list_cell_types`, `layer_boundaries`) through the open [Model Context Protocol](https://modelcontextprotocol.io). Ask "show me a neurogliaform cell everyone agrees on" or "a proofread L5 ET cell in V1 with its synapses". The AI turns the request into a query and the tool picks the cells, so cell IDs never come from the model.
 - **Coding agents with a terminal**: an [Agent Skill](https://agentskills.io) ([`skills/find-cells/SKILL.md`](skills/find-cells/SKILL.md)) and [`AGENTS.md`](AGENTS.md) teach the agent to drive the command line.
-- **The command line and Python**, with no AI at all.
+- **The command line and Python**.
 
 Every answer states the filters that were applied, how many cells matched, and caveats such as "the label systems disagree on 71% of these cells". Each link opens Neuroglancer at the first cell, with all requested cells colored and each soma annotated with its labels, layer, depth and proofreading status.
 
