@@ -11,6 +11,14 @@ abstract: >-
   MCP server, so AI assistants such as ChatGPT, Gemini, Claude or Codex can answer plain-language
   requests with real cells.
 type: software
+doi: 10.5281/zenodo.23326398
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23326398
+    description: "All versions (resolves to the latest)"
+  - type: doi
+    value: 10.5281/zenodo.23326399
+    description: "Version 0.1.0"
 version: 0.1.0
 date-released: 2026-10-12
 license: MIT
