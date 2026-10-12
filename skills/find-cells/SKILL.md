@@ -7,6 +7,8 @@ description: Find cells in the MICrONS mouse visual cortex electron-microscopy d
 
 The `microns-finder` command does every lookup. **Never invent root IDs, nucleus IDs, coordinates or links**: report only what its output contains.
 
+If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`, `list_cell_types`), you can call them instead of the command line. They take the same options and return the same JSON, and everything below about presenting results still applies.
+
 ## Setup (once per machine)
 
 1. Check it runs: `microns-finder --about`. If the command is missing and this skill came with the microns-finder plugin, install it from the plugin's folder:

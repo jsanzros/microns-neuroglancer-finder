@@ -5,12 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import warnings
 
-import numpy as np
 import pandas as pd
 
-from . import __version__, config
+from . import __version__, config, service
 
 
 def _where(items: list[str] | None) -> dict | None:
@@ -39,177 +37,90 @@ def _depth(text: str | None):
     return float(lo), float(hi)
 
 
-def _ids(text: str | None) -> list[int] | None:
-    if not text:
-        return None
-    return [int(t) for t in text.replace(",", " ").split()]
-
-
-def _jsonable(value):
-    if isinstance(value, (np.integer,)):
-        return int(value)
-    if isinstance(value, (np.floating,)):
-        return None if np.isnan(value) else round(float(value), 1)
-    if value is pd.NA or (isinstance(value, float) and np.isnan(value)):
-        return None
-    return value
-
-
-def _cell_records(cells: pd.DataFrame) -> list[dict]:
-    from .query import proofreading_summary
-
-    records = []
-    for row in cells.itertuples():
-        records.append(
-            {
-                "nucleus_id": int(row.nucleus_id),
-                "root_id": str(int(row.root_id)),  # string: 18-digit IDs overflow JSON numbers in some tools
-                "subclass": _jsonable(row.cell_type),
-                "mtype": _jsonable(row.mtype),
-                "meso_type": _jsonable(row.meso_type),
-                "broad_type": _jsonable(row.broad_type),
-                "subclass_source": _jsonable(row.cell_type_source),
-                "expert_label": bool(row.expert_label),
-                "layer": _jsonable(row.layer),
-                "depth_um": round(float(row.depth_um), 1),
-                "visual_area": _jsonable(row.visual_area),
-                "proofreading": proofreading_summary(row),
-                "coregistered": _jsonable(row.coregistered),
-                "position_vx": [int(row.x), int(row.y), int(row.z)],
-            }
-        )
-    return records
-
-
 def _print_table(df: pd.DataFrame) -> None:
     with pd.option_context("display.width", 200, "display.max_columns", 20, "display.max_colwidth", 40):
         print(df.to_string(index=False))
 
 
+def _print_link(payload: dict) -> None:
+    contents = payload.get("link_contents") or {}
+    if contents.get("synapses"):
+        syn = contents["synapses"]
+        print(f"\nsynapse layers: {syn['inputs']} inputs and {syn['outputs']} outputs of {len(syn['cells'])} cell(s)")
+    if payload.get("link"):
+        print(f"\nNeuroglancer: {payload['link']}\n({service.LINK_NOTE})")
+
+
 def cmd_find(args) -> int:
     from .finder import Finder
-    from .query import split_request
-    from .vocab import UnknownTermError
 
     finder = Finder(version=args.version, refresh=args.refresh)
-
-    def is_term(text: str) -> bool:
-        try:
-            finder.resolve(text)
-            return True
-        except ValueError:
-            return False
-
-    text = " ".join(args.request).strip()
-    try:
-        term_text, layers, areas = split_request(text, is_term) if text else ("", None, None)
-        layer = args.layer or layers
-        area = args.area or areas
-        result = finder.find(
-            term_text or None,
-            layer=layer,
-            area=area,
-            proofread=args.proofread,
-            labels=args.labels,
-            expert=args.expert,
-            functional=args.functional,
-            where=_where(args.where),
-            depth=_depth(args.depth),
-            exclude=_ids(args.exclude),
-            n=args.n,
-            seed=args.seed,
-            prefer_proofread=not args.random,
-            allow_merged=args.allow_merged,
-        )
-    except (UnknownTermError, ValueError) as err:
-        if args.json:
-            print(json.dumps({"error": str(err), "suggestions": getattr(err, "suggestions", [])}))
-        else:
-            print(f"error: {err}", file=sys.stderr)
+    payload = service.find(
+        finder,
+        " ".join(args.request),
+        layer=args.layer,
+        area=args.area,
+        proofread=args.proofread,
+        labels=args.labels,
+        expert=args.expert,
+        functional=args.functional,
+        where=_where(args.where),
+        depth=_depth(args.depth),
+        exclude=args.exclude,
+        n=args.n,
+        seed=args.seed,
+        prefer_proofread=not args.random,
+        allow_merged=args.allow_merged,
+        link=not args.no_link,
+        shorten=not args.long_url,
+        synapses=args.synapses,
+        offline=args.offline,
+    )
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return 2 if "error" in payload else 0
+    if "error" in payload:
+        print(f"error: {payload['error']}", file=sys.stderr)
         return 2
 
-    link, link_info = None, {}
-    if not args.no_link and len(result.cells):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            try:
-                link = finder.link(
-                    result, shorten=not args.long_url, synapses=args.synapses, offline=args.offline, info=link_info
-                )
-            except ValueError as err:  # e.g. --synapses with --offline
-                result.notes.append(f"No link: {err}")
-        result.notes.extend(str(w.message) for w in caught)
-
-    if args.json:
-        payload = {
-            "datastack": config.DATASTACK,
-            "version": finder.version,
-            "request": text or None,
-            "term": result.term.to_dict() if result.term else None,
-            "params": result.params,
-            "filters": result.filters,
-            "pool_size": result.pool_size,
-            "n_returned": len(result.cells),
-            "cells": _cell_records(result.cells),
-            "notes": result.notes,
-            "link": link,
-            "link_contents": _link_contents(link, link_info),
-        }
-        print(json.dumps(payload, indent=2, default=_jsonable))
-        return 0
-
-    title = result.term.label if result.term else "cells"
-    print(f"MICrONS {config.DATASTACK} v{finder.version}: {title}")
-    for f in result.filters:
+    title = payload["term"]["label"] if payload["term"] else "cells"
+    print(f"MICrONS {payload['datastack']} v{payload['version']}: {title}")
+    for f in payload["filters"]:
         print(f"  - {f}")
-    print(f"{result.pool_size} matching cells, showing {len(result.cells)}")
-    if len(result.cells):
+    print(f"{payload['pool_size']} matching cells, showing {payload['n_returned']}")
+    if payload["cells"]:
+        table = pd.DataFrame(payload["cells"]).drop(columns=["broad_type", "subclass_source", "expert_label", "position_vx"])
+        table["depth_um"] = table.depth_um.round(0).astype(int)
         print()
-        _print_table(result.summary_table())
-    for note in result.notes:
+        _print_table(table.rename(columns={"visual_area": "area"}))
+    for note in payload["notes"]:
         print(f"\nnote: {note}")
-    if link_info.get("synapses"):
-        syn = link_info["synapses"]
-        print(f"\nsynapse layers: {syn['inputs']} inputs and {syn['outputs']} outputs of {len(syn['cells'])} cell(s)")
-    if link:
-        print(f"\nNeuroglancer: {link}\n{LINK_NOTE}")
+    _print_link(payload)
     return 0
-
-
-LINK_NOTE = "(Opens in Spelunker, a Neuroglancer deployment; the first time, it asks you to sign in with Google.)"
-
-
-def _link_contents(link, info) -> dict | None:
-    if not link:
-        return None
-    layers = ["imagery", "cells (selected segments, labeled)", "somata (one point per soma, with labels)"]
-    if info.get("synapses"):
-        layers += ["inputs (synapses onto the cells)", "outputs (synapses made by the cells)"]
-    return {"layers": layers, **info, "viewer_note": LINK_NOTE}
 
 
 def cmd_terms(args) -> int:
     from .vocab import LABEL_COLUMNS, load_terms
 
-    terms = load_terms()
-    counts = {}
+    finder = None
     if args.counts:
         from .finder import Finder
-        from .query import find_cells
 
-        cells = Finder(version=args.version).cells
-        counts = {t.key: find_cells(cells, t, labels=args.labels, n=0).pool_size for t in terms}
+        finder = Finder(version=args.version)
+    entries = service.terms(finder, counts=args.counts, labels=args.labels)
     if args.json:
-        print(json.dumps([{**t.to_dict(), **({"cells": counts[t.key]} if counts else {})} for t in terms], indent=2))
+        print(json.dumps(entries, indent=2))
         return 0
     group = None
-    for t in terms:
-        if t.group != group:
-            group = t.group
+    for term, entry in zip(load_terms(), entries):
+        if term.group != group:
+            group = term.group
             print(f"\n[{group}]")
-        defs = "; ".join(f"{LABEL_COLUMNS[s]}={'/'.join(v)}" for s, v in t.definitions.items()) or "broad_type only"
-        count = f"  ({counts[t.key]} cells)" if counts else ""
-        print(f"  {t.key:16s} {t.label}{count}\n  {'':16s} {defs}\n  {'':16s} also: {', '.join(t.synonyms[:6])}")
+        defs = "; ".join(f"{LABEL_COLUMNS[s]}={'/'.join(v)}" for s, v in term.definitions.items()) or "broad_type only"
+        if term.layers:
+            defs += f"; soma in {'/'.join(term.layers)}"
+        count = f"  ({entry['cells']} cells)" if "cells" in entry else ""
+        print(f"  {term.key:16s} {term.label}{count}\n  {'':16s} {defs}\n  {'':16s} also: {', '.join(term.synonyms[:6])}")
     print("\nRaw label values (e.g. L2a, 6P-CT, AltBasket) are accepted too.")
     return 0
 
@@ -218,44 +129,27 @@ def cmd_show(args) -> int:
     from .finder import Finder
 
     finder = Finder(version=args.version)
-    ids = _ids(" ".join(args.ids))
-    rows = finder.lookup(ids)
-    missing = sorted(set(ids) - set(rows.root_id) - set(rows.nucleus_id))
-    notes = []
-    if missing:
-        notes.append(f"not in the v{finder.version} cell table (an outdated root ID, or not a cell): {missing}")
-    link, info = None, {}
-    if not rows.empty and not args.no_link:
-        try:
-            link = finder.link(rows, synapses=args.synapses, offline=args.offline, info=info)
-        except ValueError as err:
-            notes.append(f"No link: {err}")
+    payload = service.show(finder, " ".join(args.ids), link=not args.no_link, synapses=args.synapses, offline=args.offline)
     if args.json:
-        payload = {
-            "cells": _cell_records(rows),
-            "missing": [str(m) for m in missing],
-            "notes": notes,
-            "link": link,
-            "link_contents": _link_contents(link, info),
-        }
         print(json.dumps(payload, indent=2))
-        return 0 if not rows.empty else 2
-    for note in notes:
+        return 0 if payload["cells"] else 2
+    for note in payload["notes"]:
         print(f"note: {note}", file=sys.stderr)
-    if rows.empty:
+    if not payload["cells"]:
         return 2
-    _print_table(rows.drop(columns=["xt_um", "zt_um"]).T.reset_index().rename(columns={"index": "field"}))
-    if link:
-        print(f"\nNeuroglancer: {link}\n{LINK_NOTE}")
+    table = pd.DataFrame(payload["cells"]).T.reset_index()
+    table.columns = ["field"] + [f"cell {i + 1}" for i in range(len(payload["cells"]))]
+    _print_table(table)
+    _print_link(payload)
     return 0
 
 
 def cmd_layers(args) -> int:
-    from .layers import LAYER_BOUNDS
-
-    print("Soma depth below the pia (µm, standard_transform space):")
-    for name, top, bottom in LAYER_BOUNDS:
-        print(f"  {name:3s} {top:5.0f} - {'' if np.isinf(bottom) else f'{bottom:.0f}'}")
+    info = service.layers()
+    print(f"Soma depth, {info['unit']}:")
+    for row in info["layers"]:
+        bottom = "" if row["bottom_um"] is None else f"{row['bottom_um']:.0f}"
+        print(f"  {row['layer']:3s} {row['top_um']:5.0f} - {bottom}")
     return 0
 
 
@@ -265,6 +159,23 @@ def cmd_cache(args) -> int:
     if args.refresh or cache_info(args.version) is None:
         load_cells(args.version, refresh=True)
     print(json.dumps(cache_info(args.version), indent=2))
+    return 0
+
+
+def cmd_mcp_config(args) -> int:
+    from .setup_helpers import mcp_config
+
+    print(mcp_config(args.app))
+    return 0
+
+
+def cmd_install_skill(args) -> int:
+    from .setup_helpers import install_skill
+
+    agents = ("claude", "codex", "antigravity") if args.agent == "all" else (args.agent,)
+    for path in install_skill(agents, dest=args.dest):
+        print(f"installed {path}")
+    print("Restart the agent (or start a new session) so it picks the skill up.")
     return 0
 
 
@@ -319,6 +230,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     lay = sub.add_parser("layers", help="print the layer depth boundaries")
     lay.set_defaults(func=cmd_layers)
+
+    from .setup_helpers import CLIENTS
+
+    m = sub.add_parser("mcp-config", help="show how to connect an AI app to the MCP server")
+    m.add_argument("app", choices=CLIENTS)
+    m.set_defaults(func=cmd_mcp_config)
+
+    k = sub.add_parser("install-skill", help="copy the agent skill to where Claude Code, Codex or Antigravity read skills")
+    k.add_argument("--agent", choices=["all", "claude", "codex", "antigravity"], default="all")
+    k.add_argument("--dest", help="install into this skills folder instead")
+    k.set_defaults(func=cmd_install_skill)
 
     c = sub.add_parser("cache", help="download or inspect the local cell table")
     c.add_argument("--refresh", action="store_true")

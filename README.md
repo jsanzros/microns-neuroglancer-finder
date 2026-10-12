@@ -17,11 +17,11 @@ MICrONS minnie65_public v1926: astrocyte
 Neuroglancer: https://spelunker.cave-explorer.org/#!middleauth+https://global.daf-apis.com/nglstate/api/v1/...
 ```
 
-It works three ways:
+It works with any AI assistant, and without one:
 
-- **With an AI agent.** Install it as a Claude Code plugin and ask "show me a neurogliaform cell everyone agrees on" or "a proofread L5 ET cell in V1 with its synapses". The agent turns the request into a query; the tool picks the cells. Cell IDs never come from the model.
-- **From the command line**, as above.
-- **From Python**, for anything custom.
+- **Any MCP-capable AI**: ChatGPT, Gemini, Claude, Codex, GitHub Copilot, Cursor, Antigravity and others. The `microns-finder-mcp` server gives the AI four tools (`find_cells`, `describe_cells`, `list_cell_types`, `layer_boundaries`) through the open [Model Context Protocol](https://modelcontextprotocol.io). Ask "show me a neurogliaform cell everyone agrees on" or "a proofread L5 ET cell in V1 with its synapses". The AI turns the request into a query and the tool picks the cells, so cell IDs never come from the model.
+- **Coding agents with a terminal**: an [Agent Skill](https://agentskills.io) ([`skills/find-cells/SKILL.md`](skills/find-cells/SKILL.md)) and [`AGENTS.md`](AGENTS.md) teach the agent to drive the command line.
+- **The command line and Python**, with no AI at all.
 
 Every answer states the filters that were applied, how many cells matched, and caveats such as "the label systems disagree on 71% of these cells". Each link opens Neuroglancer at the first cell, with all requested cells colored and each soma annotated with its labels, layer, depth and proofreading status.
 
@@ -38,7 +38,40 @@ python -c "from caveclient import CAVEclient; CAVEclient().auth.setup_token(make
 python -c "from caveclient import CAVEclient; CAVEclient().auth.save_token(token='PASTE_TOKEN_HERE')"
 ```
 
-The first query downloads a table of the ~144,000 detected nuclei (about 10 seconds) to `~/.cache/microns-finder`. After that, queries run offline. Short links, segment labels and synapses still use the CAVE servers.
+Then download the cell table once (about 10 seconds): a table of the ~144,000 detected nuclei, saved to `~/.cache/microns-finder`. After that, queries run offline. Short links, segment labels and synapses still use the CAVE servers.
+
+```bash
+microns-finder cache
+```
+
+## Connect your AI
+
+`microns-finder mcp-config <app>` prints the exact configuration for your machine, including the full path to the server, which desktop apps often need.
+
+| AI | How it connects | Command |
+| --- | --- | --- |
+| Claude Desktop | local MCP server | `microns-finder mcp-config claude-desktop` |
+| Claude Code | plugin (below) or local MCP server | `microns-finder mcp-config claude-code` |
+| ChatGPT (web and desktop) | remote MCP server in Developer Mode (paid plans) | `microns-finder mcp-config chatgpt` |
+| Codex (CLI, IDE, ChatGPT desktop) | local MCP server, plus the skill | `microns-finder mcp-config codex` |
+| Gemini app (web) | remote MCP server under Connected Apps (some account types and regions) | `microns-finder mcp-config gemini-web` |
+| Antigravity CLI (successor of Gemini CLI) | local MCP server, plus the skill | `microns-finder mcp-config antigravity` |
+| Cursor | local MCP server | `microns-finder mcp-config cursor` |
+| VS Code / GitHub Copilot | local MCP server | `microns-finder mcp-config vscode` |
+| Any other MCP client | stdio command `microns-finder-mcp`, or the HTTP URL below | |
+
+**Local apps** (desktop apps, coding agents) start the server themselves over stdio. Nothing else to run.
+
+**Web apps** (ChatGPT, Gemini) only reach servers on the internet over HTTPS. Run the server in HTTP mode and give it a public address with a tunnel:
+
+```bash
+microns-finder-mcp --http --public --port 8000 --preload
+cloudflared tunnel --url http://127.0.0.1:8000        # or your provider's tunnel; prints an https://... address
+```
+
+Add `https://<tunnel-address>/mcp` as a custom MCP connector/app with no authentication. `--public` lets the server answer requests addressed to the tunnel's domain; without it, only `localhost` is accepted (use `--allowed-host DOMAIN` to allow just one domain). While it runs, anyone with that URL can use the server. The data is public and read-only, but your CAVE token makes the short links, so don't share the URL and stop the tunnel when you're done. Menu names in ChatGPT and Gemini change between releases; see their help pages for the current path.
+
+**Skills for coding agents.** `microns-finder install-skill` copies the skill to where Claude Code (`~/.claude/skills`), Codex (`~/.agents/skills`) and Antigravity (`~/.gemini/antigravity-cli/skills`) look for skills. Use `--agent codex` (or `claude`, `antigravity`) for just one, or `--dest DIR` for any other agent.
 
 ### As a Claude Code plugin
 
@@ -47,7 +80,7 @@ The first query downloads a table of the ~144,000 detected nuclei (about 10 seco
 /plugin install microns-finder@microns-finder
 ```
 
-The plugin adds a `find-cells` skill that Claude uses whenever you ask to see MICrONS cells. The skill can also install the Python package from the plugin's own folder. The skill follows the open [Agent Skills](https://agentskills.io) format, so `skills/find-cells/SKILL.md` also works with other agents that read it.
+The plugin installs the `find-cells` skill. It can also install the Python package from the plugin's own folder.
 
 ## Command line
 
@@ -65,7 +98,7 @@ microns-finder terms                                       # the vocabulary
 microns-finder layers                                      # the layer boundaries
 ```
 
-Add `--json` for machine-readable output; that's what the agent skill uses.
+Add `--json` for machine-readable output: the same JSON the MCP tools return.
 
 ## Python
 

@@ -237,8 +237,11 @@ def find_cells(
         from .data import known_labels
 
         term = resolve(term, known_labels(cells))
-    if layer is None and term is not None and term.layers:
-        layer = list(term.layers)
+    if term is not None and term.layers:
+        if layer is None:
+            layer = list(term.layers)
+        else:
+            notes.append(f"'{term.label}' normally means somata in {', '.join(term.layers)}; used the requested layer instead.")
     consistent = label_consistency(cells)
 
     mask = pd.Series(True, index=cells.index)
