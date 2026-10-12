@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, together with the MICrONS dataset papers listed in the README."
+title: "microns-finder: plain-language search of MICrONS cells with Neuroglancer links"
+version: 0.1.0
+date-released: 2026-10-11
+license: MIT
+repository-code: "https://github.com/jsanzros/microns-finder"
+authors:
+  - family-names: "Sanz-Ros"
+    given-names: "Jorge"
+    affiliation: "Stanford University"

@@ -1,0 +1,14 @@
+{
+  "name": "microns-finder",
+  "description": "Tools for exploring the MICrONS connectomics dataset",
+  "owner": {
+    "name": "Jorge Sanz-Ros"
+  },
+  "plugins": [
+    {
+      "name": "microns-finder",
+      "source": "./",
+      "description": "Find MICrONS cells by type, layer and area in plain language, and open them in Neuroglancer."
+    }
+  ]
+}

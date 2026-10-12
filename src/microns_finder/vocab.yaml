@@ -1,0 +1,323 @@
+# Cell-type vocabulary for MICrONS (minnie65_public).
+#
+# Each entry maps the names people use to label values in the `aibs_cell_info`
+# view. A cell must match `broad_type` (if given) and the label system(s)
+# chosen with `--labels`:
+#
+#   subclass  `cell_type` column: AIBS soma/nucleus metamodel (Elabbady et al.
+#             2025), overridden by expert labels in the V1 column and manual
+#             corrections. The default.
+#   mtype     `mtype` column: m-types defined on the proofread V1 column
+#             (Schneider-Mizell et al. 2025), predicted volume-wide by the same
+#             metamodel (table `aibs_metamodel_mtypes_v661_v2`).
+#   meso      `meso_type` column: multifeature model (dendrite, soma and spine
+#             features; table `cell_type_multifeature_combo`, 2026).
+#
+# With the default system, an entry that has no `subclass` falls back to
+# `mtype`, then `meso`. `--labels consensus` requires every system the entry
+# defines to agree. `always` (optional) lists systems required in every mode.
+# `layer` (optional) applies a default soma-layer filter for terms that are
+# defined by position, such as layer 1 interneurons.
+#
+# Edit this file to add terms. `pytest` checks that keys and synonyms are unique,
+# and `pytest -m live` checks that every entry returns cells.
+
+- key: astrocyte
+  label: astrocyte
+  group: nonneuronal
+  synonyms: [astrocytes, astro, astros, astroglia, astroglial cell, protoplasmic astrocyte, fibrous astrocyte]
+  broad_type: [nonneuron]
+  subclass: [astrocyte]
+
+- key: oligodendrocyte
+  label: oligodendrocyte
+  group: nonneuronal
+  synonyms: [oligodendrocytes, oligo, oligos, oligodendroglia, oligodendroglial cell, myelinating glia, myelinating oligodendrocyte]
+  broad_type: [nonneuron]
+  subclass: [oligo]
+
+- key: opc
+  label: oligodendrocyte precursor cell (OPC)
+  group: nonneuronal
+  synonyms: [OPC, OPCs, oligodendrocyte precursor, oligodendrocyte precursor cells, oligodendrocyte progenitor, oligodendrocyte progenitor cell, NG2 glia, NG2 cell, NG2 cells, polydendrocyte, polydendrocytes]
+  broad_type: [nonneuron]
+  subclass: [OPC]
+
+- key: microglia
+  label: microglia
+  group: nonneuronal
+  synonyms: [microglial cell, microglial cells, microglias, microglial]
+  broad_type: [nonneuron]
+  subclass: [microglia]
+
+- key: pericyte
+  label: pericyte
+  group: nonneuronal
+  synonyms: [pericytes, mural cell, mural cells]
+  broad_type: [nonneuron]
+  subclass: [pericyte]
+
+- key: glia
+  label: glial cell (astrocyte, oligodendrocyte, OPC or microglia)
+  group: nonneuronal
+  synonyms: [glial, glial cell, glial cells, neuroglia, neuroglial cell]
+  broad_type: [nonneuron]
+  subclass: [astrocyte, oligo, OPC, microglia]
+
+- key: nonneuronal
+  label: any non-neuronal cell
+  group: nonneuronal
+  synonyms: [non-neuronal, non-neuronal cell, nonneuronal cell, nonneuron, non-neuron, non neuron]
+  broad_type: [nonneuron]
+
+- key: neuron
+  label: any neuron
+  group: any
+  synonyms: [neurons, nerve cell]
+  broad_type: [excitatory, inhibitory]
+
+- key: excitatory
+  label: excitatory neuron (pyramidal)
+  group: excitatory
+  synonyms: [excitatory neuron, excitatory neurons, excitatory cell, pyramidal, pyramidal cell, pyramidal cells, pyramidal neuron, pyramidal neurons, principal cell, principal neuron, glutamatergic, glutamatergic neuron]
+  broad_type: [excitatory]
+
+- key: inhibitory
+  label: inhibitory neuron (interneuron)
+  group: inhibitory
+  synonyms: [interneuron, interneurons, inhibitory neuron, inhibitory neurons, inhibitory interneuron, inhibitory cell, GABAergic, GABAergic neuron, GABAergic interneuron]
+  broad_type: [inhibitory]
+
+# ---- excitatory classes -------------------------------------------------------
+
+- key: l23_pyramidal
+  label: L2/3 pyramidal (IT)
+  group: excitatory
+  synonyms: [L2/3 pyramidal, L23 pyramidal, L2-3 pyramidal, layer 2/3 pyramidal, L2/3 IT, L23 IT, L2/3 excitatory, L2/3 pyramidal cell, 23P]
+  broad_type: [excitatory]
+  subclass: [23P]
+  mtype: [L2a, L2b, L2c, L3a, L3b]
+  meso: [L2IT, L3IT]
+
+- key: l2_pyramidal
+  label: L2 pyramidal (IT)
+  group: excitatory
+  synonyms: [L2 pyramidal, L2 IT, layer 2 IT, L2 pyramidal cell, L2IT]
+  broad_type: [excitatory]
+  mtype: [L2a, L2b, L2c]
+  meso: [L2IT]
+  notes: A type, not a position. For "a pyramidal cell located in layer 2" use the term "pyramidal" with --layer L2.
+
+- key: l3_pyramidal
+  label: L3 pyramidal (IT)
+  group: excitatory
+  synonyms: [L3 pyramidal, L3 IT, layer 3 IT, L3 pyramidal cell, L3IT]
+  broad_type: [excitatory]
+  mtype: [L3a, L3b]
+  meso: [L3IT]
+  notes: A type, not a position. For "a pyramidal cell located in layer 3" use the term "pyramidal" with --layer L3.
+
+- key: l4_excitatory
+  label: L4 excitatory (IT)
+  group: excitatory
+  synonyms: [L4 pyramidal, L4 IT, L4 excitatory, layer 4 pyramidal, layer 4 excitatory, L4 pyramidal cell, spiny stellate, spiny stellate cell, star pyramid, star pyramidal, L4IT, 4P]
+  broad_type: [excitatory]
+  subclass: [4P]
+  mtype: [L4a, L4b, L4c]
+  meso: [L4IT]
+
+- key: l5_it
+  label: L5 IT (intratelencephalic)
+  group: excitatory
+  synonyms: [L5 IT, L5IT, layer 5 IT pyramidal, L5 intratelencephalic, layer 5 IT, L5 IT pyramidal, L5 IT cell, 5P-IT, 5P IT]
+  broad_type: [excitatory]
+  subclass: [5P-IT]
+  mtype: [L5a, L5b]
+  meso: [L5IT]
+
+- key: l5_et
+  label: L5 ET (extratelencephalic, thick-tufted)
+  group: excitatory
+  synonyms: [L5 ET, L5ET, layer 5 ET, L5 PT, L5PT, layer 5 PT, ET, ET cell, PT, PT cell, PT cells, pyramidal tract, pyramidal tract neuron, extratelencephalic, L5 extratelencephalic, thick-tufted, thick tufted, thick-tufted pyramidal, thick-tufted L5, L5 thick-tufted, subcerebral projection neuron, 5P-ET, 5P ET]
+  broad_type: [excitatory]
+  subclass: [5P-ET]
+  mtype: [L5ET]
+  meso: [L5ET]
+
+- key: l5_np
+  label: L5 NP (near-projecting)
+  group: excitatory
+  synonyms: [L5 NP, L5NP, near-projecting, near projecting, L5 near-projecting, NP cell, 5P-NP, 5P NP]
+  broad_type: [excitatory]
+  subclass: [5P-NP]
+  mtype: [L5NP]
+  meso: [L5NP]
+
+- key: l5_pyramidal
+  label: L5 pyramidal (IT, ET or NP)
+  group: excitatory
+  synonyms: [L5 pyramidal, L5 pyramidal cell, layer 5 pyramidal, layer 5 pyramidal cell, L5 excitatory, layer 5 excitatory]
+  broad_type: [excitatory]
+  subclass: [5P-IT, 5P-ET, 5P-NP]
+  meso: [L5IT, L5ET, L5NP]
+
+- key: l6_pyramidal
+  label: L6 pyramidal (IT or CT)
+  group: excitatory
+  synonyms: [L6 pyramidal, L6 pyramidal cell, layer 6 pyramidal, layer 6 pyramidal cell, L6 excitatory, layer 6 excitatory]
+  broad_type: [excitatory]
+  subclass: [6P-IT, 6P-CT, 6P-U]
+  meso: [L6IT, L6CT]
+
+- key: l6_it
+  label: L6 IT (intratelencephalic)
+  group: excitatory
+  synonyms: [L6 IT, L6IT, L6 intratelencephalic, layer 6 IT, L6 IT pyramidal, 6P-IT, 6P IT]
+  broad_type: [excitatory]
+  subclass: [6P-IT]
+  meso: [L6IT]
+
+- key: l6_ct
+  label: L6 CT (corticothalamic)
+  group: excitatory
+  synonyms: [L6 CT, L6CT, CT, CT cell, corticothalamic, corticothalamic neuron, L6 corticothalamic, layer 6 CT, 6P-CT, 6P CT]
+  broad_type: [excitatory]
+  subclass: [6P-CT]
+  meso: [L6CT]
+
+- key: l6_wm
+  label: deep L6 / white-matter-border pyramidal
+  group: excitatory
+  synonyms: [WM-P, L6wm, L6 WM, white matter pyramidal, white-matter pyramidal, white matter border pyramidal, L6b neuron, L6b pyramidal]
+  broad_type: [excitatory]
+  subclass: [WM-P]
+  mtype: [L6wm]
+  notes: A rare class (a few dozen cells), the deepest L6 pyramidal cells at the white-matter border; the closest match to "L6b" here. Most nuclei in the white matter itself are unclassified.
+
+# ---- inhibitory classes -------------------------------------------------------
+
+- key: basket
+  label: basket cell
+  group: inhibitory
+  synonyms: [basket, basket cells, BC, perisomatic basket cell, large basket cell]
+  broad_type: [inhibitory]
+  subclass: [BC]
+  mtype: [PTC]
+  meso: [PV, AltBasket]
+  notes: Includes PV-like and VIP/Sncg-like ("AltBasket") basket cells; use "PV basket" or "CCK basket" for one of them.
+
+- key: pv_basket
+  label: PV basket cell (putative parvalbumin)
+  group: inhibitory
+  synonyms: [PV basket, PV basket cell, PV basket cells, PV+ basket, PV+ basket cell, parvalbumin basket cell, Pvalb basket cell, fast-spiking basket cell]
+  broad_type: [inhibitory]
+  subclass: [BC]
+  mtype: [PTC]
+  meso: [PV]
+  always: [meso]
+  notes: Basket cells that are also in the multifeature model's PV cluster. Molecular identity is inferred from morphology; EM has no molecular labels.
+
+- key: alt_basket
+  label: VIP/Sncg-like basket cell (putative CCK basket)
+  group: inhibitory
+  synonyms: [AltBasket, alt basket, CCK basket, CCK basket cell, CCK cell, CCK interneuron, Sncg, Sncg cell, Sncg basket cell, VIP basket cell]
+  broad_type: [inhibitory]
+  meso: [AltBasket]
+  notes: The multifeature model's "basket cells that cluster with VIP/Sncg cells rather than PV cells". Molecular identity is inferred from morphology.
+
+- key: pv
+  label: PV-like interneuron (putative parvalbumin, mostly basket)
+  group: inhibitory
+  synonyms: [PV, PV cell, PV cells, PV+, PV+ interneuron, PV interneuron, Pvalb, Pvalb+, Pvalb cell, Pvalb interneuron, parvalbumin, parvalbumin cell, parvalbumin interneuron, parvalbumin-positive, fast-spiking, fast spiking interneuron]
+  broad_type: [inhibitory]
+  meso: [PV]
+  notes: Molecular identity is inferred from morphology; EM has no molecular labels. Chandelier cells (also PV+) are a separate term.
+
+- key: chandelier
+  label: chandelier cell (axo-axonic)
+  group: inhibitory
+  synonyms: [chandelier, chandelier cells, ChC, ChCs, axo-axonic, axoaxonic, axo-axonic cell]
+  broad_type: [inhibitory]
+  meso: [ChC]
+  notes: Only the multifeature model labels chandelier cells (a few dozen in the volume).
+
+- key: martinotti
+  label: Martinotti cell
+  group: inhibitory
+  synonyms: [Martinotti, Martinotti cells, MC, SST Martinotti, Martinotti interneuron]
+  broad_type: [inhibitory]
+  subclass: [MC]
+  meso: [MC]
+  always: [meso]
+  notes: Requires both the subclass and the multifeature label MC (classic Martinotti cells with layer 1 axons). The subclass label alone is broader; use --where cell_type=MC for it, or "SST" for all putative SST cells.
+
+- key: non_martinotti
+  label: non-Martinotti dendrite-targeting cell (putative SST)
+  group: inhibitory
+  synonyms: [non-Martinotti, non Martinotti, NMC, non-Martinotti cell, non-Martinotti SST]
+  broad_type: [inhibitory]
+  meso: [NMC]
+
+- key: sst
+  label: putative SST interneuron (Martinotti and other dendrite-targeting)
+  group: inhibitory
+  synonyms: [SST, SST cell, SST cells, SST+, SST+ interneuron, SST-positive, SST interneuron, somatostatin, somatostatin-positive, somatostatin cell, somatostatin interneuron, SOM, SOM cell, Sst]
+  broad_type: [inhibitory]
+  meso: [MC, NMC, DTC]
+  notes: Molecular identity is inferred from morphology; EM has no molecular labels.
+
+- key: bipolar
+  label: bipolar cell (putative VIP)
+  group: inhibitory
+  synonyms: [bipolar, bipolar cells, BPC, VIP, VIP cell, VIP cells, VIP+, VIP interneuron, bipolar interneuron]
+  broad_type: [inhibitory]
+  subclass: [BPC]
+  mtype: [ITC]
+  notes: Molecular identity is inferred from morphology; EM has no molecular labels.
+
+- key: neurogliaform
+  label: neurogliaform cell
+  group: inhibitory
+  synonyms: [neurogliaform cells, neurogliaform interneuron, neuroglia form, neuroglia-form, NGC, NGFC, NGF cell]
+  broad_type: [inhibitory]
+  subclass: [NGC]
+  mtype: [STC]
+  meso: [NGC]
+
+- key: l1_interneuron
+  label: layer 1 interneuron
+  group: inhibitory
+  synonyms: [L1 interneuron, L1 interneurons, layer 1 interneuron, layer 1 interneurons, L1 inhibitory, L1 inhibitory neuron, layer 1 inhibitory neuron]
+  broad_type: [inhibitory]
+  layer: [L1]
+  notes: Any inhibitory neuron with its soma in layer 1. The multifeature model's own "L1" class (mostly non-neurogliaform layer 1 cells) is available as --where meso_type=L1.
+
+- key: ptc
+  label: perisomatic-targeting cell (PTC)
+  group: inhibitory
+  synonyms: [PTC, perisomatic targeting, perisomatic-targeting, perisomatic targeting cell, perisomatic-targeting interneuron]
+  broad_type: [inhibitory]
+  mtype: [PTC]
+
+- key: dtc
+  label: dendrite-targeting cell (DTC)
+  group: inhibitory
+  synonyms: [DTC, dendrite targeting, dendrite-targeting, dendrite targeting cell, dendrite-targeting interneuron]
+  broad_type: [inhibitory]
+  mtype: [DTC]
+  meso: [MC, NMC, DTC, AltDTC]
+
+- key: itc
+  label: interneuron-targeting cell (ITC, disinhibitory)
+  group: inhibitory
+  synonyms: [ITC, interneuron targeting, interneuron-targeting, interneuron targeting cell, inhibitory-targeting, inhibitory targeting cell, disinhibitory, disinhibitory interneuron]
+  broad_type: [inhibitory]
+  mtype: [ITC]
+  meso: [ITC, ITCperi]
+
+- key: stc
+  label: sparsely targeting cell (STC)
+  group: inhibitory
+  synonyms: [STC, sparsely targeting, sparsely-targeting, sparse targeting, sparsely targeting cell]
+  broad_type: [inhibitory]
+  mtype: [STC]
