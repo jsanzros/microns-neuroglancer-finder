@@ -35,7 +35,7 @@ microns-finder = "microns_finder.cli:main"
 microns-finder-mcp = "microns_finder.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/jsanzros/microns-finder"
+Homepage = "https://github.com/jsanzros/microns-neuroglancer-finder"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/microns_finder"]

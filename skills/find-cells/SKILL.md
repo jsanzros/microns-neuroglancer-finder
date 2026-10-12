@@ -12,7 +12,7 @@ If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`,
 ## Setup (once per machine)
 
 1. Check it runs: `microns-finder --about`. If the command is missing and this skill came with the microns-finder plugin, install it from the plugin's folder:
-   `pip install "${CLAUDE_PLUGIN_ROOT}"`, or run it without installing: `uvx --from "${CLAUDE_PLUGIN_ROOT}" microns-finder ...`. Otherwise: `pip install "git+https://github.com/jsanzros/microns-finder"`.
+   `pip install "${CLAUDE_PLUGIN_ROOT}"`, or run it without installing: `uvx --from "${CLAUDE_PLUGIN_ROOT}" microns-finder ...`. Otherwise: `pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"`.
 2. It needs a CAVE token for the public MICrONS data. If a command fails with an authentication or terms-of-service error, ask the user to run this in their own terminal, sign in with Google in the page that opens, accept the MICrONS terms, and paste the token into the second command:
    `python -c "from caveclient import CAVEclient; CAVEclient().auth.setup_token(make_new=True)"`
    `python -c "from caveclient import CAVEclient; CAVEclient().auth.save_token(token='PASTE_TOKEN_HERE')"`

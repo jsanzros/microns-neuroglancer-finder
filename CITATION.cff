@@ -4,7 +4,7 @@ title: "microns-finder: plain-language search of MICrONS cells with Neuroglancer
 version: 0.1.0
 date-released: 2026-10-11
 license: MIT
-repository-code: "https://github.com/jsanzros/microns-finder"
+repository-code: "https://github.com/jsanzros/microns-neuroglancer-finder"
 authors:
   - family-names: "Sanz-Ros"
     given-names: "Jorge"

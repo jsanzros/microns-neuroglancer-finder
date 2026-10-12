@@ -28,7 +28,7 @@ Every answer states the filters that were applied, how many cells matched, and c
 ## Install
 
 ```bash
-pip install "git+https://github.com/jsanzros/microns-finder"
+pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"
 ```
 
 You need a free CAVE token for the public MICrONS data (Google sign-in, plus accepting the MICrONS terms of use):
@@ -76,7 +76,7 @@ Add `https://<tunnel-address>/mcp` as a custom MCP connector/app with no authent
 ### As a Claude Code plugin
 
 ```text
-/plugin marketplace add jsanzros/microns-finder
+/plugin marketplace add jsanzros/microns-neuroglancer-finder
 /plugin install microns-finder@microns-finder
 ```
 

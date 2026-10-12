@@ -6,7 +6,7 @@
   "author": {
     "name": "Jorge Sanz-Ros"
   },
-  "repository": "https://github.com/jsanzros/microns-finder",
+  "repository": "https://github.com/jsanzros/microns-neuroglancer-finder",
   "license": "MIT",
   "keywords": ["neuroscience", "connectomics", "MICrONS", "neuroglancer", "electron microscopy"]
 }

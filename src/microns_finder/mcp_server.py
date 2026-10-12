@@ -158,7 +158,7 @@ def build_server():
         description="Find cells in the MICrONS mouse visual cortex EM dataset and open them in Neuroglancer.",
         instructions=INSTRUCTIONS,
         version=__version__,
-        website_url="https://github.com/jsanzros/microns-finder",
+        website_url="https://github.com/jsanzros/microns-neuroglancer-finder",
     )
     read_only = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
     for tool in TOOLS:
