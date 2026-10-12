@@ -218,6 +218,6 @@ If you use this tool, please cite the dataset and the papers behind the labels y
 - Elabbady et al. Perisomatic ultrastructure efficiently classifies cells in mouse cortex. *Nature* 640, 478-486 (2025). https://www.nature.com/articles/s41586-024-07765-7
 - Schneider-Mizell et al. Inhibitory specificity from a connectomic census of mouse visual cortex. *Nature* 640, 448-458 (2025). https://doi.org/10.1038/s41586-024-07780-8
 
-And cite this tool: Sanz-Ros, J. (2026). *microns-finder: plain-language search of MICrONS cells with Neuroglancer links*. Zenodo. https://doi.org/10.5281/zenodo.23326398 (all versions; v0.1.0 is https://doi.org/10.5281/zenodo.23326399). GitHub's "Cite this repository" button gives the same reference from [CITATION.cff](CITATION.cff). The MICrONS data are released under CC BY 4.0. The code is MIT licensed.
+And cite this tool: Sanz-Ros, J. (2026). *microns-finder: plain-language search of MICrONS cells with Neuroglancer links*. Zenodo. https://doi.org/10.5281/zenodo.23326398 (this DOI covers all versions; each release also has its own DOI on Zenodo). GitHub's "Cite this repository" button gives the same reference from [CITATION.cff](CITATION.cff). The MICrONS data are released under CC BY 4.0. The code is MIT licensed.
 
 Built with [Claude Code](https://claude.com/claude-code).
