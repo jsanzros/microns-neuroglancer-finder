@@ -1,7 +1,11 @@
 import json
 import urllib.parse
+import warnings
 
-from microns_finder.links import build_state, cell_label, make_link
+import pytest
+
+from microns_finder import service
+from microns_finder.links import LinkWarning, build_state, cell_label, make_link
 from microns_finder.query import find_cells
 
 
@@ -37,3 +41,16 @@ def test_duplicate_roots_shown_once(cells):
     rows = cells[cells.root_id == 113]
     vs = build_state(rows, client=None)
     assert len(vs.get_layer("cells").segments) == 1
+
+
+def test_only_link_warnings_become_notes():
+    class NoisyFinder:
+        def link(self, cells, **kwargs):
+            warnings.warn("a library's own warning", RuntimeWarning)
+            warnings.warn("Could not upload segment labels", LinkWarning)
+            return "https://example.org"
+
+    notes = []
+    with pytest.warns(RuntimeWarning):  # passed on as a warning, not as a note
+        service._make_link(NoisyFinder(), None, notes)
+    assert notes == ["Could not upload segment labels"]

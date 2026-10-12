@@ -1,6 +1,6 @@
 import pytest
 
-from microns_finder.query import find_cells, parse_areas, split_request
+from microns_finder.query import find_cells, parse_areas, proofreading_summary, split_request
 
 
 def roots(result):
@@ -137,3 +137,8 @@ def test_contradicting_labels_ranked_last_and_dropped_by_consensus(cells):
 def test_negative_n_rejected(cells):
     with pytest.raises(ValueError):
         find_cells(cells, "astrocyte", n=-1)
+
+
+def test_proofreading_summary_without_strategy(cells):
+    row = next(cells[cells.root_id == 110].itertuples())  # proofread, but no strategy recorded
+    assert proofreading_summary(row) == "dendrite clean, axon clean"

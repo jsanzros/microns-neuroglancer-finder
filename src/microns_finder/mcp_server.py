@@ -30,6 +30,7 @@ Rules:
 - Use labels="consensus" when the user wants confident or typical examples, or when a note reports low agreement between label systems.
 - PV, SST, VIP and CCK are morphology-based proxies; EM has no molecular labels. Say so.
 - For "another one", call again with a different seed or with exclude set to the IDs already shown.
+- For synapses between two cell types ("a neurogliaform cell with its synapses onto a Martinotti cell"), call find_synapses. Reply with each pair's link, then its zoom links (one per synapse), a short table of the two cells, then the notes; always say whether the presynaptic axon is proofread.
 - Nucleus IDs are stable across releases; root IDs change when cells are proofread.
 """
 
@@ -131,6 +132,46 @@ def describe_cells(
 
 
 @_quiet
+def find_synapses(
+    pre_type: Annotated[
+        str,
+        Field(description='Presynaptic cell type, optionally with a position, e.g. "neurogliaform", "basket cell in layer 4", "L5 ET in V1".'),
+    ],
+    post_type: Annotated[str, Field(description='Postsynaptic cell type, same format, e.g. "martinotti", "L2/3 pyramidal".')],
+    area: Annotated[str | None, Field(description='Visual area of both cells unless a type names its own: "V1", "RL", "AL", "LM" or "HVA".')] = None,
+    labels: Annotated[
+        Literal["subclass", "mtype", "meso", "consensus"],
+        Field(description="Label system for both types; consensus when the user wants confident examples."),
+    ] = "subclass",
+    n: Annotated[int, Field(ge=1, le=5, description="Number of connected pairs (default 1).")] = 1,
+    zoom: Annotated[int, Field(ge=0, le=10, description="Zoomed-in links per pair, one per synapse, largest first (default 3).")] = 3,
+    min_synapses: Annotated[int, Field(ge=1, description="Only pairs connected by at least this many synapses.")] = 1,
+    exclude: Annotated[list[str] | None, Field(description="Root or nucleus IDs already shown, to skip on both sides.")] = None,
+    seed: Annotated[int, Field(description="Change to break ties between equally good pairs differently.")] = 0,
+) -> dict:
+    """Find pairs of cells connected by synapses, one type onto another, with Neuroglancer links.
+
+    Each pair in `pairs` has the two cells (`pre`, `post`), `n_synapses`, the `synapses` (id, size,
+    position), a `link` showing both cells with every synapse marked, and `zoom_links`, each opening
+    on one synapse with the EM at full resolution. Pairs whose presynaptic axon is proofread come
+    first, then pairs with more synapses. `notes` carry the caveats; `error` with `suggestions`
+    if a type wasn't recognized.
+    """
+    return service.synapses(
+        _get_finder(),
+        pre=pre_type,
+        post=post_type,
+        area=area,
+        labels=labels,
+        n=n,
+        zoom=zoom,
+        min_synapses=min_synapses,
+        exclude=exclude,
+        seed=seed,
+    )
+
+
+@_quiet
 def list_cell_types(
     counts: Annotated[bool, Field(description="Also count matching cells per type (takes a second or two).")] = False,
 ) -> dict:
@@ -145,7 +186,7 @@ def layer_boundaries() -> dict:
     return service.layers()
 
 
-TOOLS = (find_cells, describe_cells, list_cell_types, layer_boundaries)
+TOOLS = (find_cells, describe_cells, find_synapses, list_cell_types, layer_boundaries)
 
 
 def build_server():

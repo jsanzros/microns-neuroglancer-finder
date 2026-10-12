@@ -66,3 +66,15 @@ def test_short_link_round_trip(finder):
     assert state["position"] == [float(first.x), float(first.y), float(first.z)]
     seg = next(layer for layer in state["layers"] if layer["name"] == "cells")
     assert {int(s) for s in seg["segments"]} == {int(r) for r in res.cells.root_id}
+
+
+def test_synapses_between_types_and_zoom_link(finder):
+    res = finder.synapses("neurogliaform", "martinotti")
+    [conn] = res.connections
+    assert conn.pre.cell_type == "NGC" and conn.post.cell_type == "MC" and len(conn.synapses) >= 1
+    _, [zoomed] = finder.connection_links(conn, zoom=1)
+    state = finder.client.state.get_state_json(int(zoomed.rsplit("/", 1)[1]))
+    s = conn.synapses.iloc[0]
+    assert state["position"] == [float(s.ctr_pt_position_x), float(s.ctr_pt_position_y), float(s.ctr_pt_position_z)]
+    marks = next(layer for layer in state["layers"] if layer["name"] == "synapses")["annotations"]
+    assert len(marks) == len(conn.synapses)

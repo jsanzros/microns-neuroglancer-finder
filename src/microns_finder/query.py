@@ -115,10 +115,11 @@ def proofreading_summary(row) -> str:
     if isinstance(row.glia_proofreading, str):
         return f"glia {row.glia_proofreading}"
     parts = []
+    # A missing strategy is pd.NA, which can't be used with `or`.
     if row.dendrite_cleaned:
-        parts.append(f"dendrite {row.dendrite_strategy or 'clean'}")
+        parts.append(f"dendrite {row.dendrite_strategy if isinstance(row.dendrite_strategy, str) else 'clean'}")
     if row.axon_cleaned:
-        parts.append(f"axon {row.axon_strategy or 'clean'}")
+        parts.append(f"axon {row.axon_strategy if isinstance(row.axon_strategy, str) else 'clean'}")
     return ", ".join(parts) if parts else "none"
 
 
@@ -167,6 +168,15 @@ def _outer_edges(layers: list[str]) -> list[float]:
         if np.isfinite(bottom) and (i + 1 == len(names) or names[i + 1] not in layers):
             edges.append(bottom)
     return edges
+
+
+def definitions_agree(cells: pd.DataFrame, term: Term | None) -> pd.Series:
+    """True where every label system that defines `term` gives the cell that term."""
+    agree = pd.Series(True, index=cells.index)
+    if term is not None:
+        for system, values in term.definitions.items():
+            agree &= cells[LABEL_COLUMNS[system]].isin(values).fillna(False)
+    return agree.astype(bool)
 
 
 def term_mask(cells: pd.DataFrame, term: Term, labels: str = "subclass") -> pd.Series:
@@ -218,18 +228,19 @@ def find_cells(
     where: dict | None = None,
     depth: tuple[float, float] | None = None,
     exclude=None,
-    n: int = 5,
+    n: int | None = 5,
     seed: int = 0,
     prefer_proofread: bool = True,
     allow_merged: bool = False,
 ) -> FindResult:
-    """Return up to `n` cells matching the request, plus the filters and caveats applied.
+    """Return up to `n` cells matching the request (all of them, ranked, if `n` is None),
+    plus the filters and caveats applied.
 
     Cells come only from the table; nothing is guessed. By default segments
     holding more than one nucleus (soma-soma merges) and nuclei without a
     segment are excluded, and proofread cells are returned first.
     """
-    if n < 0:
+    if n is not None and n < 0:
         raise ValueError("n must be 0 or more")
     filters: list[str] = []
     notes: list[str] = []
@@ -313,10 +324,7 @@ def find_cells(
 
     # Cells that every label system defined for the term agrees on, and whose
     # subclass doesn't contradict their broad type.
-    defs_agree = pd.Series(True, index=pool.index)
-    if term is not None:
-        for system, values in term.definitions.items():
-            defs_agree &= pool[LABEL_COLUMNS[system]].isin(values).fillna(False)
+    defs_agree = definitions_agree(pool, term)
     pool_consistent = consistent.loc[pool.index]
     agree = defs_agree & pool_consistent
     if term is not None and term.broad_type and labels != "consensus" and pool_size:
@@ -360,11 +368,13 @@ def find_cells(
         order = order.assign(_score=proofread_score(pool))
         keys, ascending = keys + ["_score"], ascending + [False]
     order = order.sort_values(keys + ["_rand"], ascending=ascending + [True])
-    picked = order.drop(columns=[c for c in ("_rand", "_score", "_agree", "_clear") if c in order]).head(n)
+    picked = order.drop(columns=[c for c in ("_rand", "_score", "_agree", "_clear") if c in order])
+    if n is not None:
+        picked = picked.head(n)
 
     if pool_size == 0:
         notes.append("No cells match. Try removing a filter (layer, area, proofreading) or another --labels system.")
-    elif pool_size < n:
+    elif n is not None and pool_size < n:
         notes.append(f"Only {pool_size} cell(s) match.")
 
     params = {

@@ -6,8 +6,9 @@ import pandas as pd
 
 from . import config
 from .data import known_labels, load_cells, make_client
-from .links import make_link
+from .links import connection_links, make_link
 from .query import FindResult, find_cells
+from .synapses import Connection, SynapseResult, find_synapses
 from .vocab import resolve
 
 
@@ -54,3 +55,21 @@ class Finder:
             cells = self.lookup(cells)
         client = None if offline else self.client
         return make_link(cells, client, shorten=shorten and not offline, title=title or f"MICrONS v{self.version}", **kwargs)
+
+    def synapses(self, pre=None, post=None, **kwargs) -> SynapseResult:
+        """Pairs of cells connected by synapses, `pre` onto `post` (e.g. "neurogliaform", "martinotti").
+
+        See `microns_finder.synapses.find_synapses` for the keyword arguments.
+        """
+        result = find_synapses(self.client, self.cells, pre, post, **kwargs)
+        result.params["version"] = self.version
+        return result
+
+    def connection_links(
+        self, connection: Connection, *, zoom: int = 3, shorten: bool = True, offline: bool = False, title: str | None = None
+    ) -> tuple[str, list[str]]:
+        """Overview link for a pair from `synapses` (both cells, every synapse) and up to `zoom` links,
+        each zoomed in on one synapse, largest first."""
+        client = None if offline else self.client
+        title = title or f"synapses | MICrONS v{self.version}"
+        return connection_links(connection, client, shorten=shorten and not offline, zoom=zoom, title=title)

@@ -18,20 +18,6 @@ mcp = pytest.importorskip("mcp")
 from mcp import Client, StdioServerParameters  # noqa: E402
 
 from microns_finder import mcp_server  # noqa: E402
-from microns_finder.finder import Finder  # noqa: E402
-
-
-class OfflineFinder(Finder):
-    """A Finder on a given table that never contacts CAVE."""
-
-    def __init__(self, cells):
-        self.version = 1926
-        self._client = None
-        self.cells = cells
-
-    def link(self, cells, **kwargs):
-        kwargs.update(offline=True, shorten=False)
-        return super().link(cells, **kwargs)
 
 
 def _payload(result):
@@ -49,8 +35,8 @@ def _call(server_or_target, name, arguments=None):
 
 
 @pytest.fixture
-def server(cells):
-    mcp_server.set_finder(OfflineFinder(cells))
+def server(offline_finder):
+    mcp_server.set_finder(offline_finder)
     yield mcp_server.build_server()
     mcp_server.set_finder(None)
 
@@ -62,7 +48,7 @@ def test_tools_and_instructions(server):
             return client, {t.name: t for t in tools.tools}
 
     client, tools = asyncio.run(run())
-    assert set(tools) == {"find_cells", "describe_cells", "list_cell_types", "layer_boundaries"}
+    assert set(tools) == {"find_cells", "describe_cells", "find_synapses", "list_cell_types", "layer_boundaries"}
     props = tools["find_cells"].input_schema["properties"]
     assert {"cell_type", "layer", "area", "labels", "proofread", "n", "seed", "synapses", "where", "exclude"} <= set(props)
     assert "Layer" in mcp_server.INSTRUCTIONS and "Never invent" in mcp_server.INSTRUCTIONS
@@ -96,6 +82,21 @@ def test_describe_and_vocabulary_tools(server):
     assert any(t["key"] == "chandelier" for t in vocab["cell_types"])
     layers = _payload(_call(server, "layer_boundaries"))
     assert layers["layers"][0]["layer"] == "L1"
+
+
+def test_find_synapses_tool(server):
+    data = _payload(_call(server, "find_synapses", {"pre_type": "neurogliaform", "post_type": "basket cell", "n": 2, "zoom": 2}))
+    assert [(p["pre"]["root_id"], p["post"]["root_id"]) for p in data["pairs"]] == [("109", "111"), ("110", "112")]
+    best = data["pairs"][0]
+    assert best["n_synapses"] == 3 and [z["synapse_id"] for z in best["zoom_links"]] == [2, 1]
+    assert best["link"].startswith("https://spelunker.cave-explorer.org/") and data["link_contents"]["zoom_links"]
+
+
+def test_describe_parses_and_checks_ids(server):
+    data = _payload(_call(server, "describe_cells", {"ids": ["108, 109"]}))
+    assert [c["nucleus_id"] for c in data["cells"]] == [8, 9]
+    data = _payload(_call(server, "describe_cells", {"ids": ["abc"]}))
+    assert "abc" in data["error"]
 
 
 # ---- live: the real server process over both transports --------------------------------

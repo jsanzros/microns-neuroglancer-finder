@@ -30,11 +30,22 @@ def _positive(text: str) -> int:
     return value
 
 
+def _count(text: str) -> int:
+    value = int(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError("must be 0 or more")
+    return value
+
+
 def _depth(text: str | None):
     if not text:
         return None
     lo, _, hi = text.partition("-")
     return float(lo), float(hi)
+
+
+# Cell fields left out of the printed tables (they are in --json).
+_CELL_COLUMNS_HIDDEN = ["broad_type", "subclass_source", "expert_label", "position_vx"]
 
 
 def _print_table(df: pd.DataFrame) -> None:
@@ -89,13 +100,62 @@ def cmd_find(args) -> int:
         print(f"  - {f}")
     print(f"{payload['pool_size']} matching cells, showing {payload['n_returned']}")
     if payload["cells"]:
-        table = pd.DataFrame(payload["cells"]).drop(columns=["broad_type", "subclass_source", "expert_label", "position_vx"])
+        table = pd.DataFrame(payload["cells"]).drop(columns=_CELL_COLUMNS_HIDDEN)
         table["depth_um"] = table.depth_um.round(0).astype(int)
         print()
         _print_table(table.rename(columns={"visual_area": "area"}))
     for note in payload["notes"]:
         print(f"\nnote: {note}")
     _print_link(payload)
+    return 0
+
+
+def cmd_synapses(args) -> int:
+    from .finder import Finder
+
+    finder = Finder(version=args.version, refresh=args.refresh)
+    payload = service.synapses(
+        finder,
+        " ".join(args.request),
+        area=args.area,
+        labels=args.labels,
+        n=args.n,
+        zoom=args.zoom,
+        min_synapses=args.min_synapses,
+        seed=args.seed,
+        exclude=args.exclude,
+        max_cells=args.max_cells,
+        link=not args.no_link,
+        shorten=not args.long_url,
+    )
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return 2 if "error" in payload else 0
+    if "error" in payload:
+        print(f"error: {payload['error']}", file=sys.stderr)
+        return 2
+
+    names = [payload[role]["term"]["label"] if payload[role]["term"] else "any cell" for role in ("pre", "post")]
+    print(f"MICrONS {payload['datastack']} v{payload['version']}: {names[0]} onto {names[1]}")
+    for role in ("pre", "post"):
+        side = payload[role]
+        print(f"  {role}synaptic: {side['pool_size']:,} cells, {side['searched']:,} searched")
+        for f in side["filters"]:
+            print(f"    - {f}")
+    print(f"{payload['connected_pairs']} connected pairs ({payload['synapses_found']} synapses), showing {payload['n_returned']}")
+    for i, pair in enumerate(payload["pairs"], 1):
+        print(f"\npair {i}: {pair['n_synapses']} synapse(s)\n")
+        table = pd.DataFrame([{"role": "pre", **pair["pre"]}, {"role": "post", **pair["post"]}]).drop(columns=_CELL_COLUMNS_HIDDEN)
+        table["depth_um"] = table.depth_um.round(0).astype(int)
+        _print_table(table.rename(columns={"visual_area": "area"}))
+        if pair["link"]:
+            print(f"\nNeuroglancer, both cells and all {pair['n_synapses']} synapse(s): {pair['link']}")
+        for k, z in enumerate(pair["zoom_links"], 1):
+            print(f"  zoom on synapse {k} (id {z['synapse_id']}, size {z['size']}): {z['link']}")
+    for note in payload["notes"]:
+        print(f"\nnote: {note}")
+    if payload["link_contents"]:
+        print(f"\n({service.LINK_NOTE})")
     return 0
 
 
@@ -132,7 +192,10 @@ def cmd_show(args) -> int:
     payload = service.show(finder, " ".join(args.ids), link=not args.no_link, synapses=args.synapses, offline=args.offline)
     if args.json:
         print(json.dumps(payload, indent=2))
-        return 0 if payload["cells"] else 2
+        return 0 if payload.get("cells") else 2
+    if "error" in payload:
+        print(f"error: {payload['error']}", file=sys.stderr)
+        return 2
     for note in payload["notes"]:
         print(f"note: {note}", file=sys.stderr)
     if not payload["cells"]:
@@ -146,6 +209,9 @@ def cmd_show(args) -> int:
 
 def cmd_layers(args) -> int:
     info = service.layers()
+    if args.json:
+        print(json.dumps(info, indent=2))
+        return 0
     print(f"Soma depth, {info['unit']}:")
     for row in info["layers"]:
         bottom = "" if row["bottom_um"] is None else f"{row['bottom_um']:.0f}"
@@ -214,6 +280,29 @@ def build_parser() -> argparse.ArgumentParser:
     common(f)
     f.set_defaults(func=cmd_find)
 
+    from .synapses import MAX_CELLS
+
+    y = sub.add_parser("synapses", help="find synapses between two cell types, e.g. `synapses neurogliaform onto martinotti`")
+    y.add_argument("request", nargs="+", help='"PRE onto POST"; each side may add "in layer X" or "in V1"')
+    y.add_argument("--area", help="visual area of both cells, unless a side names its own (V1, RL, AL, LM or HVA)")
+    y.add_argument("--labels", choices=["subclass", "mtype", "meso", "consensus"], default="subclass", help="label system (default subclass)")
+    y.add_argument("-n", type=_positive, default=1, help="number of connected pairs (default 1)")
+    y.add_argument("--zoom", type=_count, default=3, help="zoomed-in links per pair, one per synapse, largest first (default 3)")
+    y.add_argument("--min-synapses", type=_positive, default=1, help="only pairs connected by at least this many synapses")
+    y.add_argument("--seed", type=int, default=0, help="change to break ties differently")
+    y.add_argument("--exclude", metavar="IDS", help="root or nucleus IDs to skip on both sides (comma separated)")
+    y.add_argument(
+        "--max-cells",
+        type=_positive,
+        default=MAX_CELLS,
+        help=f"most cells searched per side; the search starts with the 100 best and widens only if needed (default {MAX_CELLS})",
+    )
+    y.add_argument("--no-link", action="store_true", help="do not build Neuroglancer links")
+    y.add_argument("--long-url", action="store_true", help="full URLs instead of short links")
+    y.add_argument("--refresh", action="store_true", help="re-download the cell table")
+    common(y)
+    y.set_defaults(func=cmd_synapses)
+
     t = sub.add_parser("terms", help="list the cell-type vocabulary")
     t.add_argument("--counts", action="store_true", help="number of matching cells per term")
     t.add_argument("--labels", choices=["subclass", "mtype", "meso", "consensus"], default="subclass")
@@ -229,6 +318,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_show)
 
     lay = sub.add_parser("layers", help="print the layer depth boundaries")
+    lay.add_argument("--json", action="store_true", help="machine-readable output")
     lay.set_defaults(func=cmd_layers)
 
     from .setup_helpers import CLIENTS

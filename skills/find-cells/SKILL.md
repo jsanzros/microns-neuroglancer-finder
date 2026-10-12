@@ -1,18 +1,18 @@
 ---
 name: find-cells
-description: Find cells in the MICrONS mouse visual cortex electron-microscopy dataset (minnie65, the "cubic millimeter") by cell type, cortical layer, visual area and proofreading status, and return Neuroglancer (Spelunker) links to view them. Use when the user asks to see, show, find or pick example cells in MICrONS, minnie65 or Neuroglancer, e.g. "show me an astrocyte in layer 1", "an oligodendrocyte in the white matter", "a basket cell with its synapses", "a proofread L5 ET cell in V1", "a neurogliaform cell".
+description: Find cells in the MICrONS mouse visual cortex electron-microscopy dataset (minnie65, the "cubic millimeter") by cell type, cortical layer, visual area and proofreading status, find pairs of cells connected by synapses, and return Neuroglancer (Spelunker) links to view them, including zoomed-in links to individual synapses. Use when the user asks to see, show, find or pick example cells or synapses in MICrONS, minnie65 or Neuroglancer, e.g. "show me an astrocyte in layer 1", "an oligodendrocyte in the white matter", "a basket cell with its synapses", "a proofread L5 ET cell in V1", "a neurogliaform cell with its synapses onto a Martinotti cell".
 ---
 
 # Find MICrONS cells and open them in Neuroglancer
 
 The `microns-finder` command does every lookup. **Never invent root IDs, nucleus IDs, coordinates or links**: report only what its output contains.
 
-If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`, `list_cell_types`), you can call them instead of the command line. They take the same options and return the same JSON, and everything below about presenting results still applies.
+If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`, `find_synapses`, `list_cell_types`, `layer_boundaries`), you can call them instead of the command line. They take the same options and return the same JSON, and everything below about presenting results still applies.
 
 ## Setup (once per machine)
 
 1. Check it runs: `microns-finder --about`. If the command is missing and this skill came with the microns-finder plugin, install it from the plugin's folder:
-   `pip install "${CLAUDE_PLUGIN_ROOT}"`, or run it without installing: `uvx --from "${CLAUDE_PLUGIN_ROOT}" microns-finder ...`. Otherwise: `pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"`.
+   `pip install "${CLAUDE_PLUGIN_ROOT}"`, or run it without installing: `uvx --from "${CLAUDE_PLUGIN_ROOT}" microns-finder ...`. Otherwise: `pip install https://github.com/jsanzros/microns-neuroglancer-finder/archive/refs/heads/main.zip` (no git needed).
 2. It needs a CAVE token for the public MICrONS data. If a command fails with an authentication or terms-of-service error, ask the user to run this in their own terminal, sign in with Google in the page that opens, accept the MICrONS terms, and paste the token into the second command:
    `python -c "from caveclient import CAVEclient; CAVEclient().auth.setup_token(make_new=True)"`
    `python -c "from caveclient import CAVEclient; CAVEclient().auth.save_token(token='PASTE_TOKEN_HERE')"`
@@ -27,6 +27,7 @@ If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`,
 2. Reply with the `link` first, then a compact table of the returned cells: nucleus ID, root ID, labels (subclass / mtype / meso_type), layer, depth (rounded), area, and proofreading summarized in a few words (e.g. "dendrite + full axon", "none"). Then pass on the `notes`. They carry the important caveats, such as label systems disagreeing or white matter being mostly unlabeled. Mention the materialization `version`, and once per conversation pass on `link_contents.viewer_note` (the viewer asks for a Google sign-in the first time). `link_contents.layers` lists what the link shows; with `--synapses`, `link_contents.synapses` gives the input and output counts.
 3. For "another one" or "different examples", rerun with `--seed 1`, `--seed 2`, ... or `--exclude <IDs already shown>`.
 4. If the output has an `error` with `suggestions`, pick the intended term or run `microns-finder terms` to see the vocabulary.
+5. For synapses between two cell types, run `microns-finder synapses <PRE type> onto <POST type> [-n N] [--zoom K] [--labels S] --json`. Each side is written like a `find` request and can carry its own layer or area ("basket cell in layer 4 onto pyramidal in layer 4"). For each entry in `pairs`, reply with the `link` (both cells, every synapse marked), then each `zoom_links` entry as "synapse 1 (size …)", one link per synapse with the EM at full resolution. Then give a two-row table of `pre` and `post` and pass on the `notes`. Always say whether the presynaptic axon is proofread; a note warns when it isn't. For another pair, use `-n 2` or `--exclude` with the nucleus IDs already shown.
 
 ## Mapping requests to commands
 
@@ -46,6 +47,9 @@ If the `microns-finder` MCP tools are connected (`find_cells`, `describe_cells`,
 | expert-labeled Martinotti cells in layer 5 | `find martinotti --layer L5 --expert` |
 | L4c m-type cells | `find --where mtype=L4c` |
 | tell me about / show cell 864691135... | `show 864691135... --json` |
+| a neurogliaform cell with its synapses onto a Martinotti cell | `synapses neurogliaform onto martinotti` |
+| two basket cells in L4 that synapse onto L4 excitatory cells, five synapses each | `synapses basket cell in layer 4 onto L4 excitatory -n 2 --zoom 5` |
+| a chandelier cell's synapses onto a pyramidal cell, strongly connected | `synapses chandelier onto pyramidal --min-synapses 5` |
 
 Rules of thumb:
 
@@ -54,7 +58,7 @@ Rules of thumb:
 - Molecular names (PV, SST, VIP, CCK) are morphology-based proxies; EM has no molecular labels. Say so when you use them.
 - Returned cells may sit in different layers unless you pass `--layer`; that is expected (e.g. neurogliaform cells occur in all layers).
 - `--proofread`: `any`, `dendrite`, `axon`, `both`, or `full` (dendrite clean and axon fully extended). For glia use `any`: astrocytes and microglia have one whole-cell status, currently "clean" for all of them. Proofread cells are already ranked first by default, so add `--proofread` only when the user insists on proofread cells.
-- `--synapses` adds input and output synapse layers (neurons only, first 3 cells). Keep `-n` between 1 and 5 for viewing.
+- `find ... --synapses` adds all input and output synapses of the shown cells (neurons only, first 3 cells). Keep `-n` between 1 and 5 for viewing. To see synapses between two particular types, use `synapses PRE onto POST` instead.
 - `--where COLUMN=VALUE` filters any column of the cell table (see below), e.g. `--where meso_type=AltBasket`.
 
 ## Beyond the CLI

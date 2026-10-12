@@ -22,7 +22,10 @@ dependencies = [
     "nglui>=4.5",
     "standard_transform>=2.0",
     "pandas>=2.0",
-    "pyarrow>=14",
+    # pyarrow 26 refuses to import with NumPy 1.x but doesn't declare numpy>=2, so pip can pair
+    # them and the tool crashes. NumPy 1.x only exists up to Python 3.12, so the cap stops there.
+    "pyarrow>=14,<26; python_version < '3.13'",
+    "pyarrow>=14; python_version >= '3.13'",
     "pyyaml>=6",
     "mcp>=2.0,<3",
 ]

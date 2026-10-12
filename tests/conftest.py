@@ -66,3 +66,75 @@ def cells():
         if df[col].dtype == object:
             df[col] = df[col].astype("string")
     return df[COLUMNS]
+
+
+class FakeMaterialize:
+    """Stands in for `CAVEclient.materialize`: synapse queries on a fixed table, recorded in `calls`."""
+
+    synapse_table = "synapses_test"
+
+    def __init__(self, synapses):
+        self.synapses = synapses
+        self.calls = []
+
+    def synapse_query(self, pre_ids=None, post_ids=None, remove_autapses=True, limit=None, **kwargs):
+        self.calls.append({"pre_ids": set(pre_ids or []), "post_ids": set(post_ids or [])})
+        df = self.synapses
+        if pre_ids is not None:
+            df = df[df.pre_pt_root_id.isin(pre_ids)]
+        if post_ids is not None:
+            df = df[df.post_pt_root_id.isin(post_ids)]
+        if remove_autapses:
+            df = df[df.pre_pt_root_id != df.post_pt_root_id]
+        return (df.head(limit) if limit else df).reset_index(drop=True)
+
+
+class FakeClient:
+    def __init__(self, synapses):
+        self.materialize = FakeMaterialize(synapses)
+
+
+def _synapse(synapse_id, pre, post, size):
+    return {
+        "id": synapse_id,
+        "size": size,
+        "pre_pt_root_id": pre,
+        "post_pt_root_id": post,
+        "ctr_pt_position_x": 100000.0 + synapse_id,
+        "ctr_pt_position_y": 100000.0,
+        "ctr_pt_position_z": 20000.0,
+    }
+
+
+@pytest.fixture
+def synapse_client():
+    rows = [
+        _synapse(1, 109, 111, 500),  # neurogliaform (labels agree, axon not proofread) onto basket: 3 synapses
+        _synapse(2, 109, 111, 900),
+        _synapse(3, 109, 111, 300),
+        _synapse(4, 110, 112, 400),  # neurogliaform (labels disagree, axon proofread) onto basket
+        _synapse(5, 110, 107, 600),  # neurogliaform onto pyramidal
+        _synapse(6, 108, 111, 700),  # pyramidal (axon proofread) onto basket: 1 synapse
+        _synapse(7, 111, 111, 100),  # autapse
+        _synapse(8, 107, 112, 300),  # pyramidal (axon not proofread) onto basket: 2 synapses
+        _synapse(9, 107, 112, 350),
+    ]
+    return FakeClient(pd.DataFrame(rows))
+
+
+@pytest.fixture
+def offline_finder(cells, synapse_client):
+    """A Finder on the synthetic table: synapses from `synapse_client`, links built without CAVE."""
+    from microns_finder.finder import Finder
+
+    class OfflineFinder(Finder):
+        def __init__(self):
+            self.version, self._client, self.cells = 1926, synapse_client, cells
+
+        def link(self, cells, **kwargs):
+            return super().link(cells, **{**kwargs, "offline": True, "shorten": False})
+
+        def connection_links(self, connection, **kwargs):
+            return super().connection_links(connection, **{**kwargs, "offline": True, "shorten": False})
+
+    return OfflineFinder()

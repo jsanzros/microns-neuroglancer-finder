@@ -19,7 +19,7 @@ Neuroglancer: https://spelunker.cave-explorer.org/#!middleauth+https://global.da
 
 It works with:
 
-- **Any MCP-capable AI**: ChatGPT, Gemini, Claude, Codex, GitHub Copilot, Cursor, Antigravity and others. The `microns-finder-mcp` server gives the AI four tools (`find_cells`, `describe_cells`, `list_cell_types`, `layer_boundaries`) through the open [Model Context Protocol](https://modelcontextprotocol.io). Ask "show me a neurogliaform cell everyone agrees on" or "a proofread L5 ET cell in V1 with its synapses". The AI turns the request into a query and the tool picks the cells, so cell IDs never come from the model.
+- **Any MCP-capable AI**: ChatGPT, Gemini, Claude, Codex, GitHub Copilot, Cursor, Antigravity and others. The `microns-finder-mcp` server gives the AI five tools (`find_cells`, `describe_cells`, `find_synapses`, `list_cell_types`, `layer_boundaries`) through the open [Model Context Protocol](https://modelcontextprotocol.io). Ask "show me a neurogliaform cell everyone agrees on", "a proofread L5 ET cell in V1 with its synapses" or "a neurogliaform cell with its synapses onto a Martinotti cell". The AI turns the request into a query and the tool picks the cells, so cell IDs never come from the model.
 - **Coding agents with a terminal**: an [Agent Skill](https://agentskills.io) ([`skills/find-cells/SKILL.md`](skills/find-cells/SKILL.md)) and [`AGENTS.md`](AGENTS.md) teach the agent to drive the command line.
 - **The command line and Python**.
 
@@ -28,8 +28,10 @@ Every answer states the filters that were applied, how many cells matched, and c
 ## Install
 
 ```bash
-pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"
+pip install https://github.com/jsanzros/microns-neuroglancer-finder/archive/refs/heads/main.zip
 ```
+
+This doesn't need git. If you have git, `pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"` works too.
 
 You need a free CAVE token for the public MICrONS data (Google sign-in, plus accepting the MICrONS terms of use):
 
@@ -94,6 +96,8 @@ microns-finder find "L2/3 pyramidal" --functional          # coregistered with t
 microns-finder find --where mtype=L4c                      # raw label values work too
 microns-finder find basket --seed 1                        # different examples
 microns-finder show 864691135939998724                     # describe and link a cell by root or nucleus ID
+microns-finder synapses neurogliaform onto martinotti      # a connected pair, with a zoomed-in link per synapse
+microns-finder synapses basket cell in layer 4 onto L4 excitatory -n 2 --zoom 5
 microns-finder terms                                       # the vocabulary
 microns-finder layers                                      # the layer boundaries
 ```
@@ -113,6 +117,10 @@ f.link(res, synapses=True)                     # short Neuroglancer link
 
 f.cells                                        # the full table, one row per nucleus
 f.link(f.cells.query("meso_type == 'ChC' and layer == 'L2'"))
+
+syn = f.synapses("neurogliaform", "martinotti", n=2)
+pair = syn.connections[0]                      # pair.cells (pre, post), pair.synapses
+overview, zooms = f.connection_links(pair)     # both cells, and one zoomed-in link per synapse
 ```
 
 ## How cells are chosen
@@ -167,6 +175,24 @@ Layers are assigned from soma depth below the pia, in standard_transform space. 
 Across the volume, the L2-L6 boundaries vary by about ±10 µm, L1/L2 by about ±12 µm and L6/WM by about ±25 µm (deeper toward the higher visual areas). [`scripts/derive_layer_boundaries.py`](scripts/derive_layer_boundaries.py) recomputes them for any release, and a live test checks that they still match the data.
 
 **The white matter is mostly unlabeled.** 92% of the 12,841 single-nucleus segments below 720 µm (16,055 nuclei in all) have no cell-type call, so "an astrocyte in the white matter" draws on about 50 labeled cells.
+
+### Synapses between cell types
+
+`microns-finder synapses PRE onto POST` (and the `find_synapses` MCP tool) finds pairs of cells connected by synapses. Each side is chosen like a `find` request and can carry its own layer or area ("basket cell in layer 4 onto pyramidal in layer 4"). The synapses come from the dataset's automatically detected synapse table.
+
+**Search.** Each side's cells are searched best first: cells that every label system agrees on, then cells with a proofread axon (presynaptic side) or a proofread dendrite (postsynaptic side). The search starts with the 100 best cells per side and widens to 500, then 2,000 (`--max-cells`), only if it finds too few pairs. The server is slow the first time it reads a cell's synapses, so starting small keeps most requests to seconds.
+
+**Ranking.** Connected pairs are ranked in this order:
+1. both cells are ones every label system agrees on;
+2. the presynaptic axon is proofread, fully extended first (an unproofread axon can carry merged-in pieces of other cells, and with them synapses that aren't its own);
+3. more synapses;
+4. the postsynaptic dendrite is proofread.
+
+**Links.** Each pair gets two kinds of link:
+- one showing both cells (presynaptic orange, postsynaptic blue) with a point at every synapse; the `synapses` layer panel lists them, and clicking one jumps to it;
+- one zoomed-in link per synapse, largest first (`--zoom`, default 3), with the EM at full resolution and the cells drawn faintly so the synapse shows through.
+
+Use `-n` for more pairs, `--min-synapses` for stronger connections, and `--exclude` with the IDs already shown for other pairs.
 
 ## Reproducibility
 
