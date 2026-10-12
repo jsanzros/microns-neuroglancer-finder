@@ -202,7 +202,6 @@ Use `-n` for more pairs, `--min-synapses` for stronger connections, and `--exclu
 - Quote **nucleus IDs**. Root IDs change whenever a cell is proofread.
 - Use `--version` to query another public release (`microns-finder cache --version 1822`).
 - Run the tests with `pytest` (offline, synthetic data) and `pytest -m live` (against the real data: every term returns cells, the layer boundaries still fit, and links round-trip).
-- [`docs/verification.md`](docs/verification.md) has one link per vocabulary term for checking by eye. Regenerate it with `scripts/make_verification_sheet.py`.
 
 ## Related tools
 

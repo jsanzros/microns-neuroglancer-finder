@@ -1,4 +1,6 @@
-"""Write docs/verification.md: Neuroglancer links for a human to check every vocabulary term.
+"""Write a verification sheet: Neuroglancer links for a human to check every vocabulary term.
+
+The sheet is a working file for maintainers: it goes to local/ (git-ignored), not into the repository.
 
 Usage: python scripts/make_verification_sheet.py [--version 1926] [-n 3]
 
@@ -67,7 +69,7 @@ def main():
     p.add_argument("--version", type=int, default=config.DEFAULT_VERSION)
     p.add_argument("-n", type=int, default=3)
     p.add_argument("--all-below", type=int, default=30, help="also link every cell of classes this small")
-    p.add_argument("--out", default="docs/verification.md")
+    p.add_argument("--out", default="local/verification.md")
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sheet = Sheet(Finder(version=args.version), args.n, args.all_below)

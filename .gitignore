@@ -6,3 +6,6 @@ dist/
 build/
 .pytest_cache/
 .ruff_cache/
+
+# Working files that are not part of the release (e.g. the verification sheet)
+local/

@@ -43,4 +43,4 @@ Guidance for AI coding agents (Codex, Copilot, Cursor, Antigravity, Claude Code 
   1. Run `python scripts/derive_layer_boundaries.py --version N` and update `layers.py` if the boundaries moved.
   2. Run `pytest -m live`.
   3. Update `DEFAULT_VERSION` in `config.py`.
-  4. Regenerate `docs/verification.md` with `python scripts/make_verification_sheet.py`.
+  4. Run `python scripts/make_verification_sheet.py` and check the changed cell types by eye. It writes `local/verification.md`, a working file that is git-ignored; never commit it.
