@@ -1,7 +1,7 @@
 {
   "name": "microns-finder",
   "displayName": "MICrONS Finder",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Find cells in the MICrONS mouse visual cortex EM dataset by type, layer and area in plain language, and open them in Neuroglancer.",
   "author": {
     "name": "Jorge Sanz-Ros"

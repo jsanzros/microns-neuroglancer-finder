@@ -4,6 +4,8 @@
 
 Ask for a cell type in plain language and get a Neuroglancer link to real examples in the [MICrONS](https://www.microns-explorer.org/cortical-mm3) cubic millimeter of mouse visual cortex.
 
+**Try it in your browser first:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jsanzros/microns-neuroglancer-finder/blob/main/notebooks/try_microns_finder.ipynb) A [notebook](notebooks/try_microns_finder.ipynb) walks through a few requests in about two minutes, with no installation and no account.
+
 ```text
 $ microns-finder find astrocyte in layer 1
 MICrONS minnie65_public v1926: astrocyte
@@ -35,14 +37,14 @@ pip install https://github.com/jsanzros/microns-neuroglancer-finder/archive/refs
 
 This doesn't need git. If you have git, `pip install "git+https://github.com/jsanzros/microns-neuroglancer-finder"` works too.
 
-You need a free CAVE token for the public MICrONS data (Google sign-in, plus accepting the MICrONS terms of use):
+Without a token, the tool downloads a prebuilt copy of the cell table (release v1926, 8 MB). You can search cells and open them in Neuroglancer right away, but links are full-length URLs without cell labels, and synapses aren't available. A free CAVE token for the public MICrONS data unlocks everything (Google sign-in, plus accepting the MICrONS terms of use):
 
 ```bash
 python -c "from caveclient import CAVEclient; CAVEclient().auth.setup_token(make_new=True)"
 python -c "from caveclient import CAVEclient; CAVEclient().auth.save_token(token='PASTE_TOKEN_HERE')"
 ```
 
-Then download the cell table once (about 10 seconds): a table of the ~144,000 detected nuclei, saved to `~/.cache/microns-finder`. After that, queries run offline. Short links, segment labels and synapses still use the CAVE servers.
+Then get the cell table once: a table of the ~144,000 detected nuclei, saved to `~/.cache/microns-finder`. With a token it's built from the CAVE servers (about 10 seconds); without one, the prebuilt copy is downloaded. After that, queries run offline. Short links, segment labels and synapses still use the CAVE servers.
 
 ```bash
 microns-finder cache

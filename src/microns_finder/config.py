@@ -20,6 +20,17 @@ IMAGE_SOURCE = "precomputed://https://bossdb-open-data.s3.amazonaws.com/iarpa_mi
 SEGMENTATION_SOURCE = "graphene://middleauth+https://minnie.microns-daf.com/segmentation/table/minnie65_public"
 VIEWER_SITE = "https://spelunker.cave-explorer.org/"
 
+# Prebuilt cell tables, for people without a CAVE token (e.g. trying the tool in
+# Colab): (materialization version, cache schema) -> (URL, sha256). Built with
+# `microns-finder cache` and attached to a GitHub release; derived from MICrONS
+# data (CC BY 4.0). MICRONS_FINDER_SNAPSHOT_URL overrides the URL (for testing).
+SNAPSHOTS = {
+    (1926, 2): (
+        "https://github.com/jsanzros/microns-neuroglancer-finder/releases/download/v0.1.2/cells_minnie65_public_v1926_s2.parquet",
+        "dfc011dec5fe83e54f2d5d6e049be38c25411ab4b95deada56ba04bb904f9807",
+    ),
+}
+
 CELL_INFO_VIEW = "aibs_cell_info"
 ASTROCYTE_PROOFREADING_TABLE = "vortex_astrocyte_proofreading_status"
 MICROGLIA_PROOFREADING_TABLE = "vortex_microglia_proofreading_status"

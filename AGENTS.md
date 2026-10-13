@@ -44,3 +44,11 @@ Guidance for AI coding agents (Codex, Copilot, Cursor, Antigravity, Claude Code 
   2. Run `pytest -m live`.
   3. Update `DEFAULT_VERSION` in `config.py`.
   4. Run `python scripts/make_verification_sheet.py` and check the changed cell types by eye. It writes `local/verification.md`, a working file that is git-ignored; never commit it.
+- **Prebuilt cell table (the no-token path):** people without a CAVE token get the table listed in `config.SNAPSHOTS`, a parquet file attached to a GitHub release. When `DEFAULT_VERSION` or `CACHE_SCHEMA` changes:
+  1. Build the table with `microns-finder cache --refresh`.
+  2. Attach the parquet file from `~/.cache/microns-finder/` to the next release (`gh release create vX.Y.Z <file>`).
+  3. Add its download URL and sha256 to `config.SNAPSHOTS`.
+- **Every code release:**
+  1. Bump the version in `pyproject.toml`, `src/microns_finder/__init__.py`, `.claude-plugin/plugin.json` and `CITATION.cff`.
+  2. Run `python scripts/build_notebook.py vX.Y.Z --execute`, so the Colab notebook installs the new tag and shows fresh outputs.
+  3. Create the GitHub release. Zenodo archives it and issues a DOI automatically.

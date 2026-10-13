@@ -8,8 +8,12 @@ materialization version, so queries after the first are offline and instant.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import shutil
 import time
+import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -136,29 +140,79 @@ def _paths(version: int) -> tuple[Path, Path]:
     return base.with_suffix(".parquet"), base.with_suffix(".json")
 
 
-def load_cells(version: int = config.DEFAULT_VERSION, refresh: bool = False, client=None) -> pd.DataFrame:
-    """Return the cell table for `version`, downloading it on first use."""
+def snapshot_available(version: int = config.DEFAULT_VERSION) -> bool:
+    return (version, CACHE_SCHEMA) in config.SNAPSHOTS
+
+
+def download_snapshot(version: int = config.DEFAULT_VERSION) -> pd.DataFrame:
+    """Download the prebuilt cell table for `version` (no CAVE token needed) into the cache."""
+    if not snapshot_available(version):
+        raise RuntimeError(
+            f"There is no prebuilt cell table for v{version}; building one needs a CAVE token. "
+            f"Prebuilt versions: {sorted(v for v, s in config.SNAPSHOTS if s == CACHE_SCHEMA)}."
+        )
+    url, sha256 = config.SNAPSHOTS[(version, CACHE_SCHEMA)]
+    url = os.environ.get("MICRONS_FINDER_SNAPSHOT_URL", url)
     data_path, meta_path = _paths(version)
-    if data_path.exists() and not refresh:
-        return pd.read_parquet(data_path)
-    client = client or make_client(version)
-    started = time.time()
-    df = build_cell_table(client)
-    df.to_parquet(data_path, index=False)
+    tmp = data_path.with_suffix(".part")
+    with urllib.request.urlopen(url, timeout=120) as response, open(tmp, "wb") as out:
+        shutil.copyfileobj(response, out, length=1 << 20)
+    digest = hashlib.sha256(tmp.read_bytes()).hexdigest()
+    if digest != sha256:
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"The downloaded cell table is corrupted or changed (sha256 {digest}); try again.")
+    tmp.replace(data_path)
+    df = pd.read_parquet(data_path)
+    _write_meta(meta_path, version, len(df), source="snapshot", snapshot_url=url)
+    return df
+
+
+def _write_meta(meta_path: Path, version: int, rows: int, **extra) -> None:
     meta_path.write_text(
         json.dumps(
             {
                 "datastack": config.DATASTACK,
                 "version": version,
                 "cache_schema": CACHE_SCHEMA,
-                "rows": len(df),
+                "rows": rows,
                 "built_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                "build_seconds": round(time.time() - started, 1),
                 "microns_finder_version": __version__,
+                **extra,
             },
             indent=2,
         )
     )
+
+
+def load_cells(version: int = config.DEFAULT_VERSION, refresh: bool = False, client=None, source: str = "auto") -> pd.DataFrame:
+    """Return the cell table for `version`, downloading it on first use.
+
+    `source`: "cave" builds it from the CAVE servers (needs a token); "snapshot"
+    downloads the prebuilt copy attached to a GitHub release (no token); "auto"
+    tries CAVE and falls back to the snapshot when no token works.
+    """
+    if source not in ("auto", "cave", "snapshot"):
+        raise ValueError(f"source must be 'auto', 'cave' or 'snapshot', not {source!r}")
+    data_path, meta_path = _paths(version)
+    if data_path.exists() and not refresh:
+        return pd.read_parquet(data_path)
+    if source == "snapshot":
+        return download_snapshot(version)
+    try:
+        client = client or make_client(version)
+    except RuntimeError as err:
+        if source != "auto":
+            raise
+        if snapshot_available(version):
+            return download_snapshot(version)
+        prebuilt = sorted(v for v, s in config.SNAPSHOTS if s == CACHE_SCHEMA)
+        raise RuntimeError(
+            f"{err}\n\nThere is no prebuilt cell table for v{version} (prebuilt: {prebuilt}), so this version needs a CAVE token."
+        ) from err
+    started = time.time()
+    df = build_cell_table(client)
+    df.to_parquet(data_path, index=False)
+    _write_meta(meta_path, version, len(df), source="cave", build_seconds=round(time.time() - started, 1))
     return df
 
 

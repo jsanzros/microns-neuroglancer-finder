@@ -7,7 +7,7 @@
 >>> f.link(res)                        # short Spelunker/Neuroglancer URL
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from .finder import Finder  # noqa: E402
 
